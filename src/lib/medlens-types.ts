@@ -1,10 +1,14 @@
 export type ResultStatus = "Low" | "Normal" | "High" | "Not determined";
 
+export const NO_RANGE = "Reference range not provided";
+
 export interface TestResult {
   testName: string;
   result: string;
   unit: string;
   referenceRange: string;
+  date: string;
+  observation: string;
   status: ResultStatus;
   source: string;
 }
