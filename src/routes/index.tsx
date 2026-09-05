@@ -50,6 +50,8 @@ function Dashboard() {
   const [extraction, setExtraction] = useState<ExtractionResult>(demoExtraction);
   const [isDemo, setIsDemo] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [lastFile, setLastFile] = useState<File | null>(null);
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const runExtraction = useServerFn(extractReport);
@@ -59,6 +61,8 @@ function Dashboard() {
       toast.error("That file is larger than 15 MB.");
       return;
     }
+    setLastFile(file);
+    setError(null);
     setLoading(true);
     try {
       const dataBase64 = await fileToBase64(file);
@@ -73,8 +77,13 @@ function Dashboard() {
       setExtraction(result as ExtractionResult);
       setIsDemo(false);
       toast.success("Report processed.");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not read that report.");
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "We couldn't read that report. Please try again.";
+      setError(message);
+      toast.error(message);
     } finally {
       setLoading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -84,6 +93,23 @@ function Dashboard() {
   return (
     <div className="relative min-h-screen w-full bg-background font-sans text-ink">
       <div className="glow-golden pointer-events-none absolute inset-x-0 top-0 h-[520px]" />
+
+      {loading && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed inset-0 z-50 grid place-items-center bg-ink/45 backdrop-blur-sm"
+        >
+          <div className="mx-6 w-full max-w-sm rounded-2xl border border-ink/10 bg-card p-8 text-center shadow-xl">
+            <div className="mx-auto mb-5 size-10 animate-spin rounded-full border-2 border-brand/25 border-t-brand" />
+            <p className="font-display text-lg font-semibold">Reading your report…</p>
+            <p className="mt-2 text-sm text-ink/55">
+              Extracting test names, results, units, dates and any reference ranges printed on the
+              document. This can take up to a minute.
+            </p>
+          </div>
+        </div>
+      )}
 
       <header className="relative z-10 flex items-center justify-between px-8 py-5">
         <div className="flex items-center gap-3">
@@ -146,6 +172,35 @@ function Dashboard() {
             {loading ? "Reading report…" : "Upload report"}
           </button>
         </div>
+
+        {error && !loading && (
+          <div
+            role="alert"
+            className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-hi/30 bg-hi/8 px-5 py-4"
+          >
+            <div>
+              <p className="text-sm font-semibold text-hi">We couldn't extract that report</p>
+              <p className="mt-1 text-sm text-ink/60">{error}</p>
+            </div>
+            <div className="flex gap-2">
+              {lastFile && (
+                <button
+                  onClick={() => void handleFile(lastFile)}
+                  className="rounded-xl bg-ink px-4 py-2 text-sm font-semibold text-cream transition hover:bg-brand-deep"
+                >
+                  Try again
+                </button>
+              )}
+              <button
+                onClick={() => inputRef.current?.click()}
+                className="rounded-xl border border-ink/15 px-4 py-2 text-sm font-semibold text-ink transition hover:bg-ink/5"
+              >
+                Choose another file
+              </button>
+            </div>
+          </div>
+        )}
+
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
           <div className="space-y-6 lg:col-span-4">
